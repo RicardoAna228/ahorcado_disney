@@ -20,7 +20,7 @@ const categorias = {
 // ================= GUARDAR PUNTAJE EN EL SERVIDOR =================
 async function guardarPuntaje(puntaje) {
     try {
-        const response = await fetch('../bd/Puntaje.php', {
+        const response = await fetch('../bd/points.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -44,6 +44,12 @@ async function guardarPuntaje(puntaje) {
 function calcularPuntaje() {
     // Fórmula: (vidas restantes * 20) + (letras acertadas * 5) - (errores * 2)
     const letrasAcertadas = oculta.filter(l => l !== '_' && l !== ' ').length;
+
+    // No mostrar puntaje inicial antes de que haya aciertos
+    if (letrasAcertadas === 0 && errores === 0) {
+        return 0;
+    }
+
     let puntaje = (vidas * 20) + (letrasAcertadas * 5) - (errores * 2);
 
     // Asegurar que el puntaje no sea negativo
@@ -127,7 +133,7 @@ async function iniciarJuego() {
 // ================= ACTUALIZAR PANTALLA =================
 function actualizarPantalla() {
     document.getElementById("palabra").innerText = oculta.join(" ");
-    document.getElementById("vidas").innerText = "❤️ Vidas: " + vidas;
+    document.getElementById("vidas").innerText = "Vidas: " + vidas;
     actualizarLetrasUsadas();
     actualizarPuntajePantalla();
 }

@@ -5,3 +5,6 @@
 [2026-05-17 16:23:08] Usuario: Camilo - Acción: Consulta de reporte: periodo=todo, usuario=todos
 [2026-05-17 16:24:47] Usuario: Camilo - Acción: Consulta de reporte: periodo=todo, usuario=1
 [2026-05-17 16:26:37] Usuario: Camilo - Acción: Consulta de reporte: periodo=todo, usuario=todos
+[2026-05-17 16:30:12] Usuario: Camilo - Acción: Consulta de reporte: periodo=todo, usuario=todos
+[2026-05-17 16:42:37] Usuario: Camilo - Acción: Consulta de reporte: periodo=todo, usuario=todos
+[2026-05-17 16:42:39] Usuario: Camilo - Acción: Consulta de reporte: periodo=todo, usuario=1
