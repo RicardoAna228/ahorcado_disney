@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Disney</title>
+  <link rel="stylesheet" href="../css/game.css">
+</head>
+<body>
+
+<header>
+  <h1>Minijuego - Disney</h1>
+  <h3>!ADIVINA EL PERSONAJE¡</h3>
+  <nav>
+    <div class="nav-links">
+      <a href="../html/game.html">Juego</a>
+      <a href="../bd/reports.php">Reportes</a>
+      <a href="../bd/descargar_logs.php">Ver logs</a>
+    </div>
+  </nav>
+</header>
+<p id="puntaje">Puntaje: 0</p>
+
+<main>
+  <div id="top-bar">
+    <select id="categoria" onchange="iniciarJuego()">
+      <option value="todas">Todas</option>
+      <option value="princesas">Princesas</option>
+      <option value="villanos">Villanos</option>
+      <option value="animales">Animales</option>
+      <option value="clasicos">Clásicos</option>
+    </select>
+  </div>
+
+  <h2 id="palabra"></h2>
+  <p id="vidas"></p>
+
+  <div id="letras-usadas"></div>
+
+  <div id="contenedor-juego">
+
+    <div id="col-imagen">
+      <img id="disney-img">
+      <div id="pistas-container"></div>
+    </div>
+
+    <div id="horca">
+      <div class="madera base"></div>
+      <div class="madera poste"></div>
+      <div class="madera viga"></div>
+      <div class="madera cuerda"></div>
+
+      <div class="parte" id="cabeza"></div>
+      <div class="parte" id="cuerpo"></div>
+      <div class="parte" id="brazo-izq"></div>
+      <div class="parte" id="brazo-der"></div>
+      <div class="parte" id="pierna-izq"></div>
+      <div class="parte" id="pierna-der"></div>
+    </div>
+
+    <input type="text" id="letra" maxlength="1" placeholder="Letra...">
+    <button onclick="intentar()">Intentar</button>
+  </div>
+
+</main>
+
+<footer>
+  <h3>Mini juegos</h3>
+  <h3>!ADIVINA EL PERSONAJE¡</h3>
+</footer>
+
+<script src="../js/juego-script.js"></script>
+</body>
+</html>
