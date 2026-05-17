@@ -21,13 +21,18 @@ class ReportesController {
     private $conn;
     private $filtro_usuario;
     private $filtro_periodo;
-    private $rows;
-    private $usuarios;
+    private $rows = [];
+    private $usuarios = [];
 
     public function __construct() {
-        $this->conn = conectar();
+        $this->conn = connect();
         $this->filtro_usuario = isset($_GET['usuario']) ? intval($_GET['usuario']) : 0;
         $this->filtro_periodo = isset($_GET['periodo']) ? $_GET['periodo'] : 'todo';
+
+        if (!in_array($this->filtro_periodo, ['semana', 'mes', 'todo'], true)) {
+            $this->filtro_periodo = 'todo';
+        }
+
         $this->procesarReporte();
     }
 
@@ -41,50 +46,42 @@ class ReportesController {
         }
 
         $nombre_usuario = isset($_SESSION['nombre']) ? $_SESSION['nombre'] : 'Usuario';
-        if (function_exists('escribirLog')) {
-            escribirLog($nombre_usuario, "Consulta de reporte: periodo={$this->filtro_periodo}, usuario=" .
-                    ($this->filtro_usuario > 0 ? $this->filtro_usuario : 'todos'));
-        }
+        doLog($nombre_usuario, "Consulta de reporte: periodo={$this->filtro_periodo}, usuario=" .
+            ($this->filtro_usuario > 0 ? $this->filtro_usuario : 'todos'));
     }
 
     private function filtrarPorUsuario() {
         switch ($this->filtro_periodo) {
             case 'semana':
                 $sql = "SELECT u.nombre, p.puntaje, p.fecha_registro
-                        FROM puntajes p 
+                        FROM puntajes p
                         JOIN usuarios u ON p.id_usuario = u.id_usuario
-                        WHERE p.id_usuario = ?
+                        WHERE p.id_usuario = :usuario
                           AND YEARWEEK(p.fecha_registro, 1) = YEARWEEK(NOW(), 1)
                         ORDER BY p.fecha_registro DESC";
                 break;
             case 'mes':
                 $sql = "SELECT u.nombre, p.puntaje, p.fecha_registro
-                        FROM puntajes p 
+                        FROM puntajes p
                         JOIN usuarios u ON p.id_usuario = u.id_usuario
-                        WHERE p.id_usuario = ?
+                        WHERE p.id_usuario = :usuario
                           AND MONTH(p.fecha_registro) = MONTH(NOW())
                           AND YEAR(p.fecha_registro) = YEAR(NOW())
                         ORDER BY p.fecha_registro DESC";
                 break;
             default:
                 $sql = "SELECT u.nombre, p.puntaje, p.fecha_registro
-                        FROM puntajes p 
+                        FROM puntajes p
                         JOIN usuarios u ON p.id_usuario = u.id_usuario
-                        WHERE p.id_usuario = ?
+                        WHERE p.id_usuario = :usuario
                         ORDER BY p.fecha_registro DESC";
                 break;
         }
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $this->filtro_usuario);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        $stmt->execute([':usuario' => $this->filtro_usuario]);
 
-        $this->rows = [];
-        while ($r = $result->fetch_assoc()) {
-            $this->rows[] = $r;
-        }
-        $stmt->close();
+        $this->rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     private function filtrarTodos() {
@@ -120,13 +117,7 @@ class ReportesController {
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute();
-        $result = $stmt->get_result();
-
-        $this->rows = [];
-        while ($r = $result->fetch_assoc()) {
-            $this->rows[] = $r;
-        }
-        $stmt->close();
+        $this->rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function getRows() { return $this->rows; }
@@ -142,9 +133,7 @@ class ReportesController {
     }
 
     public function close() {
-        if ($this->conn) {
-            $this->conn->close();
-        }
+        $this->conn = null;
     }
 }
 
@@ -155,16 +144,20 @@ $reporte = new ReportesController();
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reportes – Mini juegos NV</title>
-    <link rel="stylesheet" href="../css/reportes.css">
+    <title>Disney - Reportes</title>
+    <link rel="stylesheet" href="../css/reports.css">
 </head>
 <body>
 <header>
     <h1>Reportes de Puntajes</h1>
-    <a href="../html/juego.html">← Volver al juego</a>
+    <nav>
+        <div class="nav-links">
+            <a href="../html/game.html">← Volver al juego</a>
+        </div>
+    </nav>
 </header>
 
-<div class="container">
+<main class="container">
     <h2>Estadísticas de partidas</h2>
 
     <form class="filtros" method="GET">
@@ -172,15 +165,11 @@ $reporte = new ReportesController();
             Usuario
             <select name="usuario">
                 <option value="0">Todos los usuarios</option>
-                <?php
-                if ($reporte->getUsuarios() && $reporte->getUsuarios()->num_rows > 0):
-                    mysqli_data_seek($reporte->getUsuarios(), 0);
-                    while ($u = $reporte->getUsuarios()->fetch_assoc()):
-                        ?>
-                        <option value="<?= $u['id_usuario'] ?>" <?= $reporte->getFiltroUsuario() == $u['id_usuario'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($u['nombre']) ?>
-                        </option>
-                    <?php endwhile; endif; ?>
+                <?php foreach ($reporte->getUsuarios() as $u): ?>
+                    <option value="<?= htmlspecialchars($u['id_usuario']) ?>" <?= $reporte->getFiltroUsuario() == $u['id_usuario'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($u['nombre']) ?>
+                    </option>
+                <?php endforeach; ?>
             </select>
         </label>
         <input type="hidden" name="periodo" value="<?= htmlspecialchars($reporte->getFiltroPeriodo()) ?>">
@@ -218,7 +207,7 @@ $reporte = new ReportesController();
             </tbody>
         </table>
             <div class="total-puntaje">Total de registros: <?= count($reporte->getRows()) ?> | Sumatoria de puntajes: <?= number_format($reporte->getTotalPuntaje()) ?></div>
-        <?php endif; ?>
+    <?php endif; ?>
 </div>
 
 <?php $reporte->close(); ?>
