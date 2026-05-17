@@ -50,33 +50,25 @@ class ReportesController {
             ($this->filtro_usuario > 0 ? $this->filtro_usuario : 'todos'));
     }
 
-    private function filtrarPorUsuario() {
+    private function getFiltroFechaSql($alias = 'p') {
         switch ($this->filtro_periodo) {
             case 'semana':
-                $sql = "SELECT u.nombre, p.puntaje, p.fecha_registro
-                        FROM puntajes p
-                        JOIN usuarios u ON p.id_usuario = u.id_usuario
-                        WHERE p.id_usuario = :usuario
-                          AND YEARWEEK(p.fecha_registro, 1) = YEARWEEK(NOW(), 1)
-                        ORDER BY p.fecha_registro DESC";
-                break;
+                return " AND {$alias}.fecha_registro >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+                         AND {$alias}.fecha_registro < DATE_ADD(DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY), INTERVAL 7 DAY)";
             case 'mes':
-                $sql = "SELECT u.nombre, p.puntaje, p.fecha_registro
-                        FROM puntajes p
-                        JOIN usuarios u ON p.id_usuario = u.id_usuario
-                        WHERE p.id_usuario = :usuario
-                          AND MONTH(p.fecha_registro) = MONTH(NOW())
-                          AND YEAR(p.fecha_registro) = YEAR(NOW())
-                        ORDER BY p.fecha_registro DESC";
-                break;
+                return " AND {$alias}.fecha_registro >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+                         AND {$alias}.fecha_registro < DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH)";
             default:
-                $sql = "SELECT u.nombre, p.puntaje, p.fecha_registro
-                        FROM puntajes p
-                        JOIN usuarios u ON p.id_usuario = u.id_usuario
-                        WHERE p.id_usuario = :usuario
-                        ORDER BY p.fecha_registro DESC";
-                break;
+                return '';
         }
+    }
+
+    private function filtrarPorUsuario() {
+        $sql = "SELECT u.nombre, p.puntaje, p.fecha_registro
+                FROM puntajes p
+                JOIN usuarios u ON p.id_usuario = u.id_usuario
+                WHERE p.id_usuario = :usuario" . $this->getFiltroFechaSql('p') . "
+                ORDER BY p.fecha_registro DESC";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([':usuario' => $this->filtro_usuario]);
@@ -85,35 +77,21 @@ class ReportesController {
     }
 
     private function filtrarTodos() {
-        switch ($this->filtro_periodo) {
-            case 'semana':
-                $sql = "SELECT u.nombre, p.puntaje, p.fecha_registro
-                        FROM puntajes p 
-                        JOIN usuarios u ON p.id_usuario = u.id_usuario
-                        WHERE YEARWEEK(p.fecha_registro, 1) = YEARWEEK(NOW(), 1)
-                        ORDER BY p.puntaje DESC
-                        LIMIT 50";
-                break;
-            case 'mes':
-                $sql = "SELECT u.nombre, p.puntaje, p.fecha_registro
-                        FROM puntajes p 
-                        JOIN usuarios u ON p.id_usuario = u.id_usuario
-                        WHERE MONTH(p.fecha_registro) = MONTH(NOW())
-                          AND YEAR(p.fecha_registro) = YEAR(NOW())
-                        ORDER BY p.puntaje DESC
-                        LIMIT 50";
-                break;
-            default:
-                $sql = "SELECT u.nombre, 
-                               MAX(p.puntaje) AS puntaje,
-                               MAX(p.fecha_registro) AS fecha_registro
-                        FROM puntajes p 
-                        JOIN usuarios u ON p.id_usuario = u.id_usuario
-                        GROUP BY u.id_usuario, u.nombre 
-                        ORDER BY puntaje DESC
-                        LIMIT 50";
-                break;
-        }
+        $filtroFechaP = $this->getFiltroFechaSql('p');
+        $filtroFechaP2 = $this->getFiltroFechaSql('p2');
+
+        $sql = "SELECT u.nombre, p.puntaje, p.fecha_registro
+                FROM puntajes p
+                JOIN usuarios u ON p.id_usuario = u.id_usuario
+                WHERE p.id_puntaje = (
+                    SELECT p2.id_puntaje
+                    FROM puntajes p2
+                    WHERE p2.id_usuario = p.id_usuario" . $filtroFechaP2 . "
+                    ORDER BY p2.puntaje DESC, p2.fecha_registro DESC, p2.id_puntaje DESC
+                    LIMIT 1
+                )" . $filtroFechaP . "
+                ORDER BY p.puntaje DESC, p.fecha_registro DESC
+                LIMIT 50";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute();
